@@ -132,7 +132,7 @@
   ];
   const CATS = [['fav', '★ Favoris'], ['combo', 'Retouches complètes'], ['skin', 'Peau'], ['eyes', 'Yeux et sourcils'], ['mouth', 'Bouche et sourire'], ['face', 'Forme du visage'], ['hair', 'Cheveux et barbe'], ['makeup', 'Maquillage'], ['body', 'Corps et vêtements'], ['light', 'Lumière'], ['bg', 'Arrière-plan'], ['restore', 'Restauration'], ['mine', 'Mes prompts']];
   const INT = { subtle: 'Very subtle and natural, barely noticeable.', medium: 'Natural-looking result.', strong: 'Clearly visible effect, but still photorealistic.' };
-  const KEEP = 'Keep the person\'s identity, facial features, expression, pose, hair, clothing, background, framing and lighting identical except for the requested change. Keep natural skin texture (no plastic or airbrushed look). Photorealistic, same resolution and grain.';
+  const KEEP = 'This is an edit of the provided photo, not a new image: it must stay the same photo of the same real person. Keep the person\'s identity, facial features, expression, pose, hair, clothing, background, framing and lighting identical except for the requested change. Keep natural skin texture (no plastic or airbrushed look). Photorealistic, same resolution and grain.';
   const T = (s) => (MP.i18n ? MP.i18n.t(s) : s);
 
   MP.retouchAI = {
@@ -183,8 +183,10 @@
         const src = MP.cloneCanvas(d.composite(null, { noLive: true }));
         const reg = await this.region(d, z, src), R = reg.R;
         const crop = MP.createCanvas(R.w, R.h); crop.getContext('2d').drawImage(src, -R.x, -R.y);
-        let em = null; if (reg.mask) { em = MP.createCanvas(R.w, R.h); const ex = em.getContext('2d'); ex.fillStyle = '#000'; ex.fillRect(0, 0, R.w, R.h); ex.globalCompositeOperation = 'destination-out'; for (let a = 0; a < 8; a++) ex.drawImage(reg.mask, -R.x + Math.cos(a) * 6, -R.y + Math.sin(a) * 6); }
-        const out = await AI.edit(crop, em, prompt);
+        // Retouche = modification de CETTE photo : aucun masque d'inpainting n'est envoyé (avec un masque, le modèle
+        // régénère tout le visage et invente une autre personne). La zone (visage / personne / sélection) est limitée
+        // ensuite par le masque du calque, côté logiciel.
+        const out = await AI.edit(crop, null, prompt);
         d.history.record(T('Retouche IA'), null);
         const l = d.addLayer('✨ ' + label); l.parent = null; l.ctx.imageSmoothingQuality = 'high'; l.ctx.drawImage(out, R.x, R.y, R.w, R.h);
         const lm = MP.createCanvas(d.width, d.height), lx = lm.getContext('2d');
