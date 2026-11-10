@@ -62,7 +62,9 @@ ${s.fil}
 - {"type":"crop","ratio":"1:1|4:5|3:2|16:9|9:16|2:3|5:4"} (keeps the most important area)
 - {"type":"rotate","deg":90|-90|180} ; {"type":"flip","dir":"h|v"} ; {"type":"resize","width":<px>} (keeps proportions)
 - {"type":"ai","op":"removeBackground|selectSubject|colorize|generativeFill|neural","prompt":"<english prompt, for generativeFill (needs selection) or neural (restyle the whole image)>"}
+- {"type":"ai","op":"retouch","ids":[<retouch ids>],"intensity":"subtle|medium|strong","prompt":"<optional extra english instruction>"} → targeted portrait/photo retouch (face, skin, eyes, teeth, hair, body, light, background), applied only to the detected face/person on a new masked layer. Retouch ids: ${MP.retouchAI ? MP.retouchAI.PRESETS.map((p) => p[0]).join(', ') : ''}
 Rules: prefer subtle, natural, professional results unless asked otherwise; use as few actions as needed (usually 1-4);
+for any portrait, face, skin, eyes, teeth, hair or body retouch (acne, wrinkles, dark circles, beard, slimming…) ALWAYS use op "retouch" with the matching ids (put anything not covered in "prompt"), never "neural";
 prefer "cameraRaw" or "light"+"colorVibrance" for general photo corrections; never invent other keys; numbers only, no units.
 If the request is impossible, return an empty actions array and explain why in "message".`;
     },
@@ -100,7 +102,8 @@ If the request is impossible, return an empty actions array and explain why in "
           else if (a.type === 'resize') { const w = Math.round(MP.clamp(+a.width || d.width, 16, 12000)), h = Math.max(1, Math.round(d.height * w / d.width)); MP.resizeImage(w, h, w > d.width ? 'details' : 'high'); MP.view.fit && MP.view.fit(); log.push(`✓ Taille ${w} × ${h}`); }
           else if (a.type === 'ai') {
             if (a.op === 'removeBackground') await AI.removeBackground(); else if (a.op === 'selectSubject') await AI.selectSubject(); else if (a.op === 'colorize') await AI.colorize();
-            else if (a.op === 'generativeFill') await AI.generativeFill(a.prompt || ''); else if (a.op === 'neural') await MP.neuralAI.apply(a.prompt || '', '✨ Assistant'); else throw new Error('opération IA inconnue ' + a.op);
+            else if (a.op === 'generativeFill') await AI.generativeFill(a.prompt || ''); else if (a.op === 'neural') await MP.neuralAI.apply(a.prompt || '', '✨ Assistant')
+            else if (a.op === 'retouch' && MP.retouchAI) { const ids = (Array.isArray(a.ids) ? a.ids : []).filter((i) => MP.retouchAI.find(i)); await MP.retouchAI.apply({ ids, intensity: ['subtle', 'medium', 'strong'].includes(a.intensity) ? a.intensity : 'medium', extra: a.prompt || '' }); } else throw new Error('opération IA inconnue ' + a.op);
             log.push('✓ IA : ' + a.op);
           } else throw new Error('action inconnue ' + a.type);
         } catch (e) { log.push('✗ ' + (a.type || '?') + ' : ' + e.message); }
