@@ -1,0 +1,58 @@
+# Construit automatiquement l'installateur et la version portable Windows (.exe) sur les serveurs de GitHub.
+# Aucun outil à installer sur votre PC : envoyez le projet sur GitHub, puis téléchargez les .exe
+# dans l'onglet « Actions » (rubrique Artifacts) ou dans « Releases » quand vous créez une étiquette v*.
+name: Construire Multipify Photo (Windows et Mac)
+on:
+  push:
+    branches: [main, master]
+    tags: ['v*']
+  workflow_dispatch:
+permissions:
+  contents: write
+jobs:
+  windows:
+    runs-on: windows-latest
+    env:
+      CSC_IDENTITY_AUTO_DISCOVERY: 'false'
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+      - name: Installer les dépendances
+        run: npm install
+      - name: Construire les .exe (installateur + portable)
+        run: npx electron-builder --win nsis portable --x64 --publish never
+      - name: Mettre les .exe à disposition (onglet Actions › Artifacts)
+        uses: actions/upload-artifact@v4
+        with:
+          name: Multipify-Photo-Windows
+          path: dist/*.exe
+      - name: Publier une version (si étiquette v*)
+        if: startsWith(github.ref, 'refs/tags/v')
+        uses: softprops/action-gh-release@v2
+        with:
+          files: dist/*.exe
+  mac:
+    runs-on: macos-latest
+    env:
+      CSC_IDENTITY_AUTO_DISCOVERY: 'false'
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+      - name: Installer les dépendances
+        run: npm install
+      - name: Construire les .dmg (Apple Silicon et Intel)
+        run: npx electron-builder --mac dmg --arm64 --x64 --publish never
+      - name: Mettre les .dmg à disposition (onglet Actions › Artifacts)
+        uses: actions/upload-artifact@v4
+        with:
+          name: Multipify-Photo-Mac
+          path: dist/*.dmg
+      - name: Publier une version (si étiquette v*)
+        if: startsWith(github.ref, 'refs/tags/v')
+        uses: softprops/action-gh-release@v2
+        with:
+          files: dist/*.dmg

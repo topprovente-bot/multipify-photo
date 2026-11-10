@@ -1,0 +1,121 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="utf-8">
+<meta http-equiv="Content-Security-Policy" content="default-src 'self'; img-src 'self' data: blob:; style-src 'self' 'unsafe-inline'; script-src 'self'; connect-src 'self' https://api.openai.com https://multipify.eu blob: data: ws: wss:">
+<title>Multipify Photo</title>
+<link rel="icon" href="img/logo.png">
+<link rel="stylesheet" href="styles.css">
+</head>
+<body>
+<div id="app">
+  <header id="menubar">
+    <div class="logo">M</div>
+    <nav id="menus"></nav>
+    <div class="brand">Multipify <b>Photo</b></div>
+  </header>
+  <div id="options"></div>
+  <div id="main">
+    <aside id="toolbar">
+      <div id="tools"></div>
+      <div id="toolcolors"></div>
+    </aside>
+    <section id="workspace">
+      <div id="tabs"></div>
+      <div id="viewport">
+        <canvas id="view" tabindex="0"></canvas>
+        <div id="welcome">
+          <div class="wcard">
+            <div class="logo big">M</div>
+            <h1>Multipify <b>Photo</b></h1>
+            <p>Retouche, montage et création graphique</p>
+            <div class="wbtns">
+              <button class="btn primary" id="welcome-new">Nouveau document</button>
+              <button class="btn" id="welcome-open">Ouvrir une image…</button>
+            </div>
+            <div id="welcome-recent"></div>
+            <p class="muted">Astuce : glissez-déposez vos images ici, ou collez-en une avec Ctrl+V.</p>
+          </div>
+        </div>
+      </div>
+    </section>
+    <aside id="panels">
+      <section class="panel collapsed" id="panel-nav"><h3>Navigation</h3><div class="body"><canvas id="navcanvas"></canvas><input type="range" id="navzoom" min="-6" max="6" step="0.01" title="Zoom"></div></section>
+      <section class="panel collapsed" id="panel-info"><h3>Info</h3><div class="body"><div id="infobox"></div></div></section>
+      <section class="panel collapsed" id="panel-histo"><h3>Histogramme</h3><div class="body"><canvas id="histcanvas"></canvas></div></section>
+      <section class="panel" id="panel-color"><h3>Couleur</h3><div class="body"></div></section>
+      <section class="panel collapsed" id="panel-swatches"><h3>Nuancier</h3><div class="body"></div></section>
+      <section class="panel" id="panel-history"><h3>Historique</h3><div class="body"><div id="historylist"></div></div></section>
+      <section class="panel grow" id="panel-layers"><h3>Calques</h3>
+        <div class="body">
+          <div class="lprops">
+            <select id="layerBlend" title="Mode de fusion"></select>
+            <label class="opac">Opacité <input type="range" id="layerOpacity" min="0" max="100"><input type="number" id="layerOpacityNum" min="0" max="100" class="num"></label>
+            <label class="lock" title="Verrouiller le calque"><input type="checkbox" id="layerLock"> Verrou</label>
+          </div>
+          <div id="layerlist"></div>
+          <div id="layerbtns"></div>
+        </div>
+      </section>
+    </aside>
+  </div>
+  <footer id="status">
+    <label>Zoom <input id="st-zoom" type="number" min="1" max="6400" step="1"> %</label>
+    <span id="st-size"></span><span id="st-layers"></span><span id="st-pos"></span><span id="st-color"></span><span id="st-info"></span>
+  </footer>
+</div>
+<div id="toast"></div>
+<div id="busy"><div class="spinner"></div><span></span></div>
+<div id="dropzone">Déposez vos images pour les ouvrir — Maj pour les importer comme calques</div>
+
+<script src="js/core.js"></script>
+<script src="js/selection.js"></script>
+<script src="js/tools.js"></script>
+<script src="js/tools2.js"></script>
+<script src="js/tools3.js"></script>
+<script src="js/ops.js"></script>
+<script src="js/fx.js"></script>
+<script src="js/ops2.js"></script>
+<script src="js/psd.js"></script>
+<script src="js/io.js"></script>
+<script src="js/ai.js"></script>
+<script src="js/guides.js"></script>
+<script src="js/liquify.js"></script>
+<script src="js/cmds.js"></script>
+<script src="js/ui.js"></script>
+<script src="js/v4.js"></script>
+<script src="js/v5a.js"></script>
+<script src="js/v5b.js"></script>
+<script src="js/v6a.js"></script>
+<script src="js/v6b.js"></script>
+<script src="js/v6c.js"></script>
+<script src="js/v7a.js"></script>
+<script src="js/v7b.js"></script>
+<script src="js/v7c.js"></script>
+<script src="js/v7d.js"></script>
+<script src="js/v8a.js"></script>
+<script src="js/v8b.js"></script>
+<script src="js/v8c.js"></script>
+<script src="js/v9a.js"></script>
+<script src="js/v9b.js"></script>
+<script src="js/v9c.js"></script>
+<script src="js/v10a.js"></script>
+<script src="js/v10b.js"></script>
+<script src="js/i18n-1.js"></script>
+<script src="js/i18n-2.js"></script>
+<script src="js/i18n-3.js"></script>
+<script src="js/i18n-4.js"></script>
+<script src="js/v11a.js"></script>
+<script src="js/v11b.js"></script>
+<script src="js/v11c.js"></script>
+<script src="js/i18n-5.js"></script>
+<script src="js/v12a.js"></script>
+<script src="js/v12b.js"></script>
+<script src="js/i18n-6.js"></script>
+<script src="js/v13a.js"></script>
+<script src="js/i18n-7.js"></script>
+<script src="js/licence.js"></script>
+<script src="js/i18n-8.js"></script>
+<script src="js/app.js"></script>
+</body>
+</html>

@@ -1,0 +1,83 @@
+{
+  "name": "multipify-photo",
+  "productName": "Multipify Photo",
+  "version": "1.0.0",
+  "description": "Multipify Photo — éditeur d'images professionnel (calques, groupes, calques de réglage, styles, PSD, IA générative, retouche, filtres)",
+  "author": "Multipify <support@multipify.eu>",
+  "homepage": "https://multipify.eu",
+  "license": "UNLICENSED",
+  "private": true,
+  "main": "main.js",
+  "scripts": {
+    "start": "electron .",
+    "dist": "electron-builder --win nsis portable --x64",
+    "dist:installer": "electron-builder --win nsis --x64",
+    "dist:mac": "electron-builder --mac dmg zip --arm64 --x64"
+  },
+  "devDependencies": {
+    "electron": "^33.2.1",
+    "electron-builder": "^25.1.8"
+  },
+  "build": {
+    "appId": "eu.multipify.photo",
+    "productName": "Multipify Photo",
+    "copyright": "© Multipify",
+    "directories": {
+      "output": "dist",
+      "buildResources": "build"
+    },
+    "files": [
+      "main.js",
+      "preload.js",
+      "collab-server.js",
+      "src/**/*",
+      "build/icon.png",
+      "package.json"
+    ],
+    "fileAssociations": [
+      {
+        "ext": "mpp",
+        "name": "Projet Multipify Photo",
+        "description": "Projet Multipify Photo",
+        "role": "Editor",
+        "icon": "build/icon.ico"
+      }
+    ],
+    "win": {
+      "icon": "build/icon.ico",
+      "target": [
+        "nsis",
+        "portable"
+      ],
+      "artifactName": "${productName}-${version}-${arch}-${target}.${ext}"
+    },
+    "nsis": {
+      "oneClick": false,
+      "perMachine": false,
+      "allowToChangeInstallationDirectory": true,
+      "createDesktopShortcut": true,
+      "createStartMenuShortcut": true,
+      "shortcutName": "Multipify Photo",
+      "installerLanguages": [
+        "fr_FR"
+      ],
+      "language": "1036",
+      "artifactName": "MultipifyPhoto-Setup-${version}.${ext}"
+    },
+    "portable": {
+      "artifactName": "Multipify-Photo-Portable-${version}.${ext}"
+    },
+    "mac": {
+      "icon": "build/icon.png",
+      "category": "public.app-category.photography",
+      "target": [
+        "dmg",
+        "zip"
+      ],
+      "artifactName": "MultipifyPhoto-mac-${arch}-${version}.${ext}"
+    },
+    "dmg": {
+      "title": "Multipify Photo ${version}"
+    }
+  }
+}
