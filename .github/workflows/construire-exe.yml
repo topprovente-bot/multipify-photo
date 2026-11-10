@@ -28,10 +28,11 @@ jobs:
         with:
           name: Multipify-Photo-Windows
           path: dist/*.exe
-      - name: Publier une version (si étiquette v*)
-        if: startsWith(github.ref, 'refs/tags/v')
+      - name: Publier la version v1.0.0 (page Releases)
         uses: softprops/action-gh-release@v2
         with:
+          tag_name: v1.0.0
+          name: Multipify Photo 1.0.0
           files: dist/*.exe
   mac:
     runs-on: macos-latest
