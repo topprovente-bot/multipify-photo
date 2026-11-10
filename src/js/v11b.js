@@ -1,6 +1,6 @@
 'use strict';
 /* v11 (2/3) — Nouvelles fonctions IA :
-   - MP.ai.chat : modèle de langage avec vision (OpenAI Chat Completions, réponse JSON)
+   - MP.ai.chat : modèle de langage avec vision (via la passerelle Multipify, réponse JSON)
    - Assistant IA : retouche en langage naturel (« rends la photo plus chaude et ajoute un titre ») → actions
      non destructives (calques de réglage, texte, recadrage, filtres, fonctions génératives), annulables en un clic
    - Retouche automatique IA, filtres neuronaux IA (styles, saisons, jour/nuit, éclairage, restauration)
@@ -21,11 +21,11 @@
     const content = image ? [{ type: 'text', text: user }, { type: 'image_url', image_url: { url: preview(image), detail: 'high' } }] : user;
     const body = { model: MP.prefs.aiTextModel || 'gpt-5.4-mini', messages: [{ role: 'system', content: system }, ...history, { role: 'user', content }], max_completion_tokens: maxTokens };
     if (json) body.response_format = { type: 'json_object' };
-    const send = async (b) => { const req = { url: 'https://api.openai.com/v1/chat/completions', key: MP.prefs.aiKey, json: b }; if (MP.native.aiRequest) return MP.native.aiRequest(req); const r = await fetch(req.url, { method: 'POST', headers: { Authorization: 'Bearer ' + req.key, 'Content-Type': 'application/json' }, body: JSON.stringify(b) }); return { ok: r.ok, status: r.status, text: await r.text() }; };
+    const send = async () => ({ ok: false, status: 503, text: '' }); // remplacé par la passerelle Multipify (licence.js)
     let res = await send(body);
     if (!res.ok && res.status === 400 && /response_format|max_completion_tokens/i.test(res.text)) { delete body.response_format; body.max_tokens = maxTokens; delete body.max_completion_tokens; res = await send(body); }
     let j = null; try { j = JSON.parse(res.text); } catch (_) { /* */ }
-    if (!res.ok) { const msg = j && j.error ? j.error.message : `erreur ${res.status}`; throw new Error(res.status === 401 ? 'clé API invalide' : msg); }
+    if (!res.ok) { const msg = j && j.error ? j.error.message : `erreur ${res.status}`; throw new Error(res.status === 503 ? 'service IA indisponible' : msg); }
     const txt = j && j.choices && j.choices[0] && j.choices[0].message && j.choices[0].message.content;
     if (!txt) throw new Error('réponse vide du modèle (' + body.model + ')');
     return json ? parseJson(txt) : txt;
@@ -173,7 +173,7 @@ If the request is impossible, return an empty actions array and explain why in "
     dialog() {
       if (!MP.doc) return; const v = { preset: 'watercolor', custom: '', sel: true };
       MP.ui.dialog({ title: '✨ Filtres neuronaux IA', width: 520, okLabel: 'Appliquer', values: v,
-        fields: [{ k: 'preset', label: 'Effet', type: 'select', options: [...this.PRESETS.map(([k, l]) => [k, l]), ['custom', 'Personnalisé (décrire ci-dessous)']] }, { k: 'custom', label: 'Description personnalisée (facultative, complète l\'effet)', type: 'textarea', rows: 2 }, { k: 'sel', label: 'Limiter à la sélection active (masque du calque)', type: 'check' }, { type: 'info', html: '<p class="muted">Le résultat est placé sur un nouveau calque au-dessus de l\'image (non destructif). Utilise votre clé OpenAI (facturé par OpenAI).</p>' }],
+        fields: [{ k: 'preset', label: 'Effet', type: 'select', options: [...this.PRESETS.map(([k, l]) => [k, l]), ['custom', 'Personnalisé (décrire ci-dessous)']] }, { k: 'custom', label: 'Description personnalisée (facultative, complète l\'effet)', type: 'textarea', rows: 2 }, { k: 'sel', label: 'Limiter à la sélection active (masque du calque)', type: 'check' }, { type: 'info', html: '<p class="muted">Le résultat est placé sur un nouveau calque au-dessus de l\'image (non destructif). Consomme des crédits IA Multipify.</p>' }],
         onOk: (o) => { const pr = this.PRESETS.find((x) => x[0] === o.preset), p = [pr ? pr[2] : '', o.custom.trim()].filter(Boolean).join(' '); if (!p) { MP.toast('Décrivez l\'effet personnalisé'); return false; } setTimeout(() => this.apply(p, '✨ ' + (pr ? (MP.i18n ? MP.i18n.t(pr[1]) : pr[1]) : 'Filtre neuronal'), o.sel), 30); } });
     },
   };
@@ -232,7 +232,7 @@ If the request is impossible, return an empty actions array and explain why in "
   UI.menus = () => {
     const m = bm(), ia = m.find((x) => x.label === 'IA');
     if (ia) { const at = ia.items.findIndex((x) => x && x.label && /^Paramètres IA/.test(x.label)); const add = [{ label: '✨ Assistant IA…', sc: 'Ctrl+Alt+A', act: need(() => MP.assistant.dialog()) }, { label: '✨ Retouche automatique (IA)', act: need(() => MP.assistant.autoEnhance()) }, { label: '✨ Filtres neuronaux IA…', act: need(() => MP.neuralAI.dialog()) }, '-', { label: '✨ Décrire l\'image (titre, texte alternatif, mots-clés)…', act: need(() => AI.describe()) }, { label: '✨ Rédiger un texte…', act: need(() => AI.writeTextDialog()) }, { label: '✨ Traduire les textes du document…', act: need(() => AI.translateDialog()) }, '-'];
-      ia.items.splice(at >= 0 ? at : ia.items.length, 0, ...add); ia.items.push({ label: 'Modèles IA…', act: () => AI.modelsDialog() }); }
+      ia.items.splice(at >= 0 ? at : ia.items.length, 0, ...add); }
     const fi = m.find((x) => x.label === 'Filtre'), nf = fi && fi.items.find((x) => x && x.label === 'Filtres neuronaux');
     if (nf && typeof nf.sub === 'function') { const s0 = nf.sub; nf.sub = () => [{ label: '✨ Filtres neuronaux IA…', act: need(() => MP.neuralAI.dialog()) }, '-', ...s0()]; }
     return m;

@@ -92,7 +92,7 @@ Object.assign(UI.dialogs, {
   },
   storagePrefs() {
     dlg6({ title: 'Préférences : enregistrement, IA, performances', width: 460,
-      fields: [{ k: 'autosaveMin', label: 'Sauvegarde automatique (minutes, 0 = jamais)', type: 'range', min: 0, max: 30 }, { k: 'versions', label: 'Conserver un historique des versions à chaque enregistrement', type: 'check' }, { k: 'aiVariants', label: 'Variations par remplissage génératif (chacune est facturée par OpenAI)', type: 'range', min: 1, max: 4 }, { k: 'historyLimit', label: 'États d\'historique', type: 'range', min: 10, max: 200 }],
+      fields: [{ k: 'autosaveMin', label: 'Sauvegarde automatique (minutes, 0 = jamais)', type: 'range', min: 0, max: 30 }, { k: 'versions', label: 'Conserver un historique des versions à chaque enregistrement', type: 'check' }, { k: 'aiVariants', label: 'Variations par remplissage génératif (chacune consomme des crédits IA)', type: 'range', min: 1, max: 4 }, { k: 'historyLimit', label: 'États d\'historique', type: 'range', min: 10, max: 200 }],
       values: { autosaveMin: MP.prefs.autosaveMin ?? 3, versions: MP.prefs.versions !== false, aiVariants: MP.prefs.aiVariants ?? 3, historyLimit: MP.prefs.historyLimit || 40 },
       onOk: (v) => { Object.assign(MP.prefs, v); MP.savePrefs(); MP.autosave.start(); MP.docs.forEach((d) => (d.history.limit = v.historyLimit)); MP.toast('Préférences enregistrées'); } });
   },

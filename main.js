@@ -120,21 +120,7 @@ ipcMain.handle('rt-host-stop', () => { if (rtServer) { rtServer.s.close(); rtSer
 ipcMain.handle('write-file', async (_e, p, data) => { fs.writeFileSync(p, Buffer.from(data)); return p; });
 ipcMain.handle('clipboard-read-image', () => { const img = clipboard.readImage(); return img.isEmpty() ? null : new Uint8Array(img.toPNG()); });
 ipcMain.handle('clipboard-write-image', (_e, data) => { clipboard.writeImage(nativeImage.createFromBuffer(Buffer.from(data))); return true; });
-ipcMain.handle('ai-request', async (_e, req) => {
-  try {
-    const headers = { Authorization: 'Bearer ' + req.key };
-    let body;
-    if (req.form) {
-      body = new FormData();
-      for (const [k, v] of Object.entries(req.form)) {
-        if (v && v.data) body.append(k, new Blob([Buffer.from(v.data)], { type: v.type }), v.filename);
-        else body.append(k, String(v));
-      }
-    } else { headers['Content-Type'] = 'application/json'; body = JSON.stringify(req.json); }
-    const r = await fetch(req.url, { method: 'POST', headers, body });
-    return { ok: r.ok, status: r.status, text: await r.text() };
-  } catch (e) { return { ok: false, status: 0, text: JSON.stringify({ error: { message: 'connexion impossible : ' + e.message } }) }; }
-});
+// IA : aucun appel direct à OpenAI, tout passe par le serveur Multipify (photo-api).
 
 /* ===== Licence Multipify Photo : identifiant de l'ordinateur, stockage protégé, appels au serveur ===== */
 const MP_SERVER = String(process.env.MULTIPIFY_SERVER || 'https://multipify.eu').replace(/\/+$/, '');

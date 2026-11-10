@@ -216,7 +216,7 @@ UI.menus = () => [
     { label: '✨ Coloriser une photo noir et blanc', act: need(() => MP.ai.colorize()) },
     { label: '✨ Sélectionner le sujet', act: need(() => MP.ai.selectSubject()) },
     '-',
-    { label: 'Paramètres IA (clé API)…', act: () => UI.dialogs.prefs('ai') },
+    { label: 'Paramètres IA…', act: () => UI.dialogs.prefs('ai') },
   ] },
   { label: 'Affichage', items: [
     { label: 'Zoom avant', sc: 'Ctrl++', act: need(() => MP.view.zoomStep(1)) },
@@ -814,17 +814,16 @@ UI.dialogs = {
       title: 'Préférences', width: 460,
       fields: [
         { type: 'header', label: 'Intelligence artificielle' },
-        { type: 'info', html: 'Les fonctions ✨ (remplissage génératif, extension, détourage, génération) utilisent l\'API Images d\'OpenAI. Créez une clé sur <b>platform.openai.com</b> → API keys. La clé reste sur cet ordinateur.' },
-        { k: 'aiKey', label: 'Clé API OpenAI', type: 'password' }, { k: 'aiModel', label: 'Modèle', type: 'text' },
+        { type: 'info', html: 'Les fonctions ✨ utilisent les crédits IA Multipify rattachés à votre licence. Aucune clé à configurer.' },
         { k: 'aiQuality', label: 'Qualité', type: 'select', options: [['low', 'Rapide (économique)'], ['medium', 'Moyenne'], ['high', 'Haute']] },
         { type: 'header', label: 'Général' },
         { k: 'historyLimit', label: 'Étapes d\'historique', type: 'number', min: 5, max: 200 },
         { k: 'rulers', label: 'Afficher les règles', type: 'check' },
       ],
-      values: { aiKey: p.aiKey, aiModel: p.aiModel, aiQuality: p.aiQuality, historyLimit: p.historyLimit, rulers: p.rulers !== false },
-      onOk: (v) => { Object.assign(MP.prefs, { aiKey: v.aiKey.trim(), aiModel: v.aiModel.trim() || 'gpt-image-1', aiQuality: v.aiQuality, historyLimit: MP.clamp(+v.historyLimit || 40, 5, 200), rulers: v.rulers }); MP.savePrefs(); MP.docs.forEach((d) => (d.history.limit = MP.prefs.historyLimit)); MP.guides.apply(); MP.toast('Préférences enregistrées'); },
+      values: { aiQuality: p.aiQuality, historyLimit: p.historyLimit, rulers: p.rulers !== false },
+      onOk: (v) => { Object.assign(MP.prefs, { aiQuality: v.aiQuality, historyLimit: MP.clamp(+v.historyLimit || 40, 5, 200), rulers: v.rulers }); MP.savePrefs(); MP.docs.forEach((d) => (d.history.limit = MP.prefs.historyLimit)); MP.guides.apply(); MP.toast('Préférences enregistrées'); },
     });
-    if (tab === 'ai') setTimeout(() => { const i = document.querySelector('.dialog input[type=password]'); if (i) i.focus(); }, 50);
+    void tab;
   },
   contentScale() {
     const d = MP.doc, ratio = d.width / d.height;

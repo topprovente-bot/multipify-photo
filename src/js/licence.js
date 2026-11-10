@@ -15,8 +15,8 @@
     get packs() { return (this.status && this.status.packs) || [{ id: 'p100', credits: 100, cents: 1000 }, { id: 'p550', credits: 550, cents: 5000 }]; },
     get salesUrl() { return (this.status && this.status.salesUrl) || (this.trial && this.trial.salesUrl) || (this.server + '/multipify-photo.html'); },
     server: 'https://multipify.eu',
-    /** mode IA : 'credits' (serveur Multipify, défaut) ou 'own' (clé OpenAI personnelle) */
-    get aiMode() { return MP.prefs.aiMode === 'own' && MP.prefs.aiKey ? 'own' : 'credits'; },
+    /** IA : uniquement via les crédits du serveur Multipify */
+    get aiMode() { return 'credits'; },
 
     async machineInfo() {
       if (this.machine) return this.machine;
@@ -74,7 +74,7 @@
       const msgs = { moved: 'Cette clé a été activée sur un autre ordinateur : Multipify Photo est désactivé ici. Saisissez votre clé pour le réactiver sur ce PC (l\'autre ordinateur sera alors désactivé).', expired: 'Votre abonnement est arrivé à échéance. Réglez-le pour débloquer le logiciel : votre clé et vos crédits IA restent les mêmes.', revoked: 'Cette licence a été révoquée. Contactez le support Multipify.', 'trial-ended': 'Votre période d\'essai est terminée. Abonnez-vous pour continuer à utiliser Multipify Photo.', 'no-licence': 'Activez Multipify Photo avec votre clé, ou abonnez-vous.', offline: 'Impossible de vérifier votre licence : connectez-vous à Internet puis réessayez.', deactivated: 'Multipify Photo a été désactivé sur cet ordinateur.', machine: 'Cette activation appartient à un autre ordinateur. Saisissez votre clé.', unknown: 'Activation introuvable : saisissez de nouveau votre clé.', released: 'Licence désactivée sur cet ordinateur.', pending: 'Le paiement de votre licence n\'est pas encore confirmé.' };
       const text = T(msgs[reason] || error || msgs['no-licence']), price = this.status && this.status.priceCents || this.trial && this.trial.priceCents || 499;
       if (!ov) { ov = el('div', { id: 'licence-overlay' }); document.body.appendChild(ov); }
-      ov.innerHTML = `<div class="lic-card"><img class="lic-logo" src="img/logo.png" alt=""><h1>Multipify <b>Photo</b> <span class="lic-ver">${esc(MP.version)}</span></h1><p class="lic-msg">${esc(text)}</p>
+      ov.innerHTML = `<div class="lic-card"><img class="lic-logo" src="img/logo.png" alt=""><h1>Multipify <b class="mp-brand">Photo</b> <span class="lic-ver">${esc(MP.version)}</span></h1><p class="lic-msg">${esc(text)}</p>
         <label class="lic-lbl">${esc(T('Clé d\'activation'))}</label><input id="lic-key" class="lic-key" placeholder="MPH-XXXX-XXXX-XXXX-XXXX" spellcheck="false" autocomplete="off">
         <div class="lic-err" id="lic-err"></div><button class="lic-btn primary" id="lic-go">${esc(T('Activer sur cet ordinateur'))}</button>
         ${reason === 'expired' && this.status && this.status.license ? `<button class="lic-btn renew" id="lic-renew">${esc(T('Régler mon abonnement'))}</button>` : ''}
@@ -97,8 +97,7 @@
     renderBadge() {
       let b = document.getElementById('credit-badge'); const mb = document.getElementById('menubar'); if (!mb) return;
       if (!b) { b = el('button', { id: 'credit-badge', type: 'button', title: T('Licence et crédits IA') }); const brand = mb.querySelector('.langbtn') || mb.querySelector('.brand'); mb.insertBefore(b, brand); b.onclick = () => this.dialog(); }
-      if (this.aiMode === 'own') b.textContent = '✨ ' + T('Clé OpenAI perso');
-      else if (this.status && this.status.valid) b.textContent = '✨ ' + this.credits + ' ' + T('crédits');
+      if (this.status && this.status.valid) b.textContent = '✨ ' + this.credits + ' ' + T('crédits');
       else if (this.trial && this.trial.active) b.textContent = '⏳ ' + T('Essai') + ' — ' + T('Activer');
       else b.textContent = '🔑 ' + T('Activer');
     },
@@ -146,26 +145,23 @@
   const shot = (c, max = 1024) => { const k = Math.min(1, max / Math.max(c.width, c.height)), w = Math.max(1, Math.round(c.width * k)), h = Math.max(1, Math.round(c.height * k)), t = MP.createCanvas(w, h), x = t.getContext('2d'); x.fillStyle = '#fff'; x.fillRect(0, 0, w, h); x.drawImage(c, 0, 0, w, h); return t.toDataURL('image/jpeg', 0.85); };
   const fail = (r) => { if (r.status === 402 && r.json && r.json.error === 'credits') { L.status && (L.status.credits = r.json.credits); L.renderBadge(); setTimeout(() => L.needCredits(r.json.cost || L.costs.edit), 50); throw new Error(T('crédits IA insuffisants')); } if (r.status === 401 || r.status === 403 || (r.status === 402 && r.json && r.json.reason)) { L.check(); throw new Error((r.json && r.json.error) || T('licence inactive')); } throw new Error((r.json && (r.json.message || r.json.error)) || T('service IA indisponible')); };
   const after = (j) => { if (j && typeof j.credits === 'number' && L.status) { L.status.credits = j.credits; if (L.data.cache) L.data.cache.credits = j.credits; L.renderBadge(); } };
+  AI.enabled = () => !!(L.status && L.status.valid && !L.status.offline);
   AI.ready = () => {
-    if (L.aiMode === 'own') return r0();
     if (!L.status || !L.status.valid) { MP.toast(T('Les fonctions IA nécessitent une licence active (crédits IA rattachés à votre clé)'), 5000); L.lock(L.trial && L.trial.active ? 'no-licence' : 'no-licence'); return false; }
     if (L.status.offline) { MP.toast(T('Les fonctions IA nécessitent une connexion Internet')); return false; }
     if (L.credits < Math.min(L.costs.edit, L.costs.chat || L.costs.edit)) { L.needCredits(L.costs.edit); return false; }
     return true;
   };
   AI.request = async (endpoint, { json, form }) => {
-    if (L.aiMode === 'own') return req0(endpoint, { json, form });
     const body = endpoint === 'edits' ? { op: 'edit', prompt: form.prompt, size: form.size, quality: form.quality, background: form.background, image: toB64(form.image.data), mask: form.mask ? toB64(form.mask.data) : null } : { op: 'generate', prompt: json.prompt, size: json.size, quality: json.quality, background: json.background };
     const r = await L.api('/api/photo/ai/image', body, 'POST', 300000); if (r.status !== 200) fail(r); after(r.json);
     const s = atob(r.json.b64), a = new Uint8Array(s.length); for (let i = 0; i < s.length; i++) a[i] = s.charCodeAt(i); return MP.io.loadImage(a, 'ia.png');
   };
   if (chat0) AI.chat = async (o) => {
-    if (L.aiMode === 'own') return chat0(o);
     const r = await L.api('/api/photo/ai/chat', { system: o.system, user: o.user, image: o.image ? shot(o.image) : null, history: o.history || [], json: o.json !== false, maxTokens: o.maxTokens }, 'POST', 150000); if (r.status !== 200) fail(r); after(r.json);
     const txt = r.json.content; if (o.json === false) return txt; const t = String(txt || '').trim().replace(/^```(?:json)?\s*/i, '').replace(/```\s*$/, ''); try { return JSON.parse(t); } catch (_) { const a = t.indexOf('{'), b = t.lastIndexOf('}'); return JSON.parse(t.slice(a, b + 1)); }
   };
   if (det0) MP.retouchAI.detect = async (src) => {
-    if (L.aiMode === 'own') return det0(src);
     const r = await L.api('/api/photo/ai/detect', { image: shot(src) }, 'POST', 120000); if (r.status !== 200) fail(r); after(r.json);
     let j = {}; try { j = JSON.parse(r.json.content); } catch (_) { /* */ }
     const ok = (b) => b && [b.x, b.y, b.w, b.h].every((v) => typeof v === 'number' && isFinite(v)) && b.w > 0.005 && b.h > 0.005, norm = (a) => (Array.isArray(a) ? a.filter(ok).map((b) => ({ x: MP.clamp(b.x, 0, 1), y: MP.clamp(b.y, 0, 1), w: MP.clamp(b.w, 0, 1), h: MP.clamp(b.h, 0, 1) })) : []);
@@ -174,11 +170,12 @@
   // AI.run : message d'erreur déjà affiché pour les crédits
   const run0 = AI.run.bind(AI); AI.run = (label, fn) => run0(label, fn);
 
-  /* ---------- Préférences IA : crédits Multipify ou clé personnelle ---------- */
+  /* ---------- Menu IA : crédits Multipify uniquement ---------- */
   const bm = UI.menus;
   UI.menus = () => {
     const m = bm(), ia = (m.find((x) => x.label === 'IA') || { items: [] }).items;
-    ia.unshift({ label: '✨ Crédits IA et licence…', act: () => L.dialog() }, { label: 'Utiliser ma propre clé OpenAI (au lieu des crédits)', act: () => MP.ui.dialog({ title: T('Mode IA'), width: 480, values: { mode: MP.prefs.aiMode === 'own' ? 'own' : 'credits' }, fields: [{ k: 'mode', label: 'Fonctions IA', type: 'select', options: [['credits', 'Crédits Multipify (recommandé, aucune clé à configurer)'], ['own', 'Ma propre clé OpenAI (facturée par OpenAI)']] }, { type: 'info', html: '<p class="muted">' + esc(T('Avec votre propre clé, renseignez-la dans IA › Paramètres IA. Les crédits Multipify ne sont alors pas utilisés.')) + '</p>' }], onOk: (o) => { MP.prefs.aiMode = o.mode; MP.savePrefs(); L.renderBadge(); if (o.mode === 'own' && !MP.prefs.aiKey) UI.dialogs.prefs('ai'); } }) }, '-');
+    ia.unshift({ label: '✨ Crédits IA et licence…', act: () => L.dialog() });
+    for (let i = ia.length - 1; i >= 0; i--) { const x = ia[i], lb = x && x.label ? String(x.label) : ''; if (/clé OpenAI|Modèles IA|clé API/.test(lb)) ia.splice(i, 1); }
     const help = (m.find((x) => x.label === 'Aide') || { items: [] }).items; help.push('-', { label: 'Licence et crédits IA…', act: () => L.dialog() }, { label: 'Rechercher des mises à jour', act: async () => { await L.check(); const u = L.status && L.status.update; if (!u || !u.latest || L._updShown === u.latest) MP.toast(T('Vous utilisez la dernière version') + ' (' + MP.version + ')'); } });
     return m;
   };

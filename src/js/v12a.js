@@ -38,7 +38,7 @@ MP.productStudio = {
     const l = d.layer, src = MP.cloneCanvas(d.composite(null, { noLive: true }));
     if (method === 'auto' || method === 'layer') { if (l && !l.adjust && !l.isGroup && !l.text) { const c = MP.cloneCanvas(d.layerStatic(l)), x = c.getContext('2d').getImageData(0, 0, c.width, c.height).data; let tr = 0; for (let i = 3; i < x.length; i += 4 * 7) if (x[i] < 250) tr++; if (tr > x.length / 4 / 7 * 0.03) return c; } if (method === 'layer') throw new Error('le calque actif n\'a pas de transparence'); }
     if ((method === 'auto' || method === 'sel') && d.selection) { const c = MP.cloneCanvas(src), x = c.getContext('2d'); x.globalCompositeOperation = 'destination-in'; x.drawImage(d.selection, 0, 0); return c; }
-    if (method === 'ai' || (method === 'auto' && MP.prefs.aiKey && MP.prefs.studioAI !== false)) { const m = await MP.ai.subjectAlpha(src), c = MP.cloneCanvas(src), x = c.getContext('2d'); x.globalCompositeOperation = 'destination-in'; x.drawImage(m, 0, 0); return c; }
+    if (method === 'ai' || (method === 'auto' && MP.ai.enabled() && MP.prefs.studioAI !== false)) { const m = await MP.ai.subjectAlpha(src), c = MP.cloneCanvas(src), x = c.getContext('2d'); x.globalCompositeOperation = 'destination-in'; x.drawImage(m, 0, 0); return c; }
     const m = MP.localSubject(src), c = MP.cloneCanvas(src), x = c.getContext('2d'); x.globalCompositeOperation = 'destination-in'; x.drawImage(m, 0, 0); return c;
   },
   /** construit un nouveau document studio à partir d'un détourage */
@@ -67,7 +67,7 @@ MP.productStudio = {
       fields: [{ type: 'info', html: '<p class="muted">Détoure le produit, le centre à la bonne taille sur un fond conforme aux places de marché et ajoute une ombre réaliste. Le résultat est un nouveau document à calques (fond, ombre, produit) entièrement modifiable.</p>' },
         { k: 'preset', label: 'Place de marché', type: 'select', options: this.PRESETS.map((p) => [p[0], p[1]]) }, { k: 'w', label: 'Largeur (taille personnalisée)', type: 'number', min: 100, max: 10000 }, { k: 'h', label: 'Hauteur (taille personnalisée)', type: 'number', min: 100, max: 10000 },
         { k: 'fill', label: 'Place occupée par le produit', type: 'range', min: 30, max: 98, unit: '%' },
-        { k: 'method', label: 'Détourage', type: 'select', options: [['auto', 'Automatique (calque transparent, sélection, IA ou fond uni)'], ['ai', 'IA (clé OpenAI)'], ['local', 'Hors ligne — fond uni (gratuit)'], ['sel', 'Sélection active'], ['layer', 'Calque déjà détouré']] },
+        { k: 'method', label: 'Détourage', type: 'select', options: [['auto', 'Automatique (calque transparent, sélection, IA ou fond uni)'], ['ai', 'IA (crédits Multipify)'], ['local', 'Hors ligne — fond uni (gratuit)'], ['sel', 'Sélection active'], ['layer', 'Calque déjà détouré']] },
         { k: 'bg', label: 'Fond', type: 'select', options: [['white', 'Blanc pur #FFFFFF (Amazon)'], ['gray', 'Gris très clair'], ['gradient', 'Dégradé studio'], ['color', 'Couleur'], ['transparent', 'Transparent (PNG)']] }, { k: 'color', label: 'Couleur du fond / du dégradé', type: 'color' },
         { k: 'shadow', label: 'Ombre', type: 'select', options: [['contact', 'Ombre de contact (posé)'], ['drop', 'Ombre portée douce'], ['reflection', 'Reflet (surface brillante)'], ['none', 'Aucune (Amazon : image principale)']] }, { k: 'shadowOpacity', label: 'Intensité de l\'ombre', type: 'range', min: 5, max: 100 }],
       onOk: (o) => { MP.prefs.studioPreset = o.preset; MP.savePrefs(); setTimeout(() => this.run(o), 30); } });
@@ -76,7 +76,7 @@ MP.productStudio = {
   async run(o) {
     const d = MP.doc; const r = this.resolve(o);
     const go = async () => { const cut = await this.cutout(d, o.method === 'local' ? 'local' : o.method); const nd = this.build(cut, r, d.name); MP.addDoc(nd); MP.afterEdit(); MP.ui.refreshAll && MP.ui.refreshAll(); MP.toast(`Photo produit ${r.w} × ${r.h} créée — calques Fond, Ombre et Produit modifiables`, 5000); return nd; };
-    try { return (o.method === 'ai' || (o.method === 'auto' && MP.prefs.aiKey)) ? await MP.ai.run('Studio produit', go) : await MP.busy('Studio produit…', go); } catch (e) { MP.toast('Studio produit : ' + e.message, 6000); }
+    try { return (o.method === 'ai' || (o.method === 'auto' && MP.ai.enabled())) ? await MP.ai.run('Studio produit', go) : await MP.busy('Studio produit…', go); } catch (e) { MP.toast('Studio produit : ' + e.message, 6000); }
   },
 };
 
@@ -105,7 +105,7 @@ MP.batchPro = {
     MP.ui.dialog({ title: 'Traitement par lots avancé', width: 560, okLabel: 'Choisir les fichiers et lancer', values: v,
       fields: [{ type: 'info', html: '<p class="muted">Chaque fichier est ouvert, traité dans l\'ordre ci-dessous, exporté puis refermé. Idéal pour un catalogue produit complet.</p>' },
         { k: 'prompt', label: '✨ Consigne pour l\'assistant IA appliquée à chaque image (facultatif)', type: 'textarea', rows: 2 }, { k: 'enhance', label: '✨ Retouche automatique (IA)', type: 'check' },
-        { k: 'removeBg', label: 'Supprimer l\'arrière-plan', type: 'check' }, { k: 'removeMode', label: 'Méthode', type: 'select', options: [['local', 'Hors ligne — fond uni (gratuit)'], ['ai', 'IA (clé OpenAI)']] },
+        { k: 'removeBg', label: 'Supprimer l\'arrière-plan', type: 'check' }, { k: 'removeMode', label: 'Méthode', type: 'select', options: [['local', 'Hors ligne — fond uni (gratuit)'], ['ai', 'IA (crédits Multipify)']] },
         { k: 'studio', label: 'Studio photo produit', type: 'check' }, { k: 'preset', label: 'Place de marché', type: 'select', options: MP.productStudio.PRESETS.filter((p) => p[0] !== 'custom').map((p) => [p[0], p[1]]) }, { k: 'shadow', label: 'Ombre', type: 'select', options: [['contact', 'Contact'], ['drop', 'Portée douce'], ['reflection', 'Reflet'], ['none', 'Aucune']] }, { k: 'bgc', label: 'Fond', type: 'select', options: [['white', 'Blanc pur'], ['gray', 'Gris clair'], ['gradient', 'Dégradé studio'], ['transparent', 'Transparent']] },
         { k: 'wm', label: 'Filigrane (réglages du dernier filigrane utilisé)', type: 'check' },
         { k: 'resize', label: 'Limiter la taille', type: 'check' }, { k: 'maxW', label: 'Largeur max.', type: 'number', min: 16, max: 20000 }, { k: 'maxH', label: 'Hauteur max.', type: 'number', min: 16, max: 20000 },
@@ -114,8 +114,8 @@ MP.batchPro = {
   },
   wmDefaults() { return {}; },
   async process(d, o) {
-    if (o.prompt && o.prompt.trim() && MP.prefs.aiKey) { const r = await MP.assistant.ask(o.prompt.trim(), { image: true }); await MP.assistant.apply(r.actions); }
-    if (o.enhance && MP.prefs.aiKey) { const r = await MP.assistant.ask('Correct and enhance this photo naturally. Use a single "cameraRaw" adjustment.', { image: true, only: ['adjust'] }); await MP.assistant.apply(r.actions); }
+    if (o.prompt && o.prompt.trim() && MP.ai.enabled()) { const r = await MP.assistant.ask(o.prompt.trim(), { image: true }); await MP.assistant.apply(r.actions); }
+    if (o.enhance && MP.ai.enabled()) { const r = await MP.assistant.ask('Correct and enhance this photo naturally. Use a single "cameraRaw" adjustment.', { image: true, only: ['adjust'] }); await MP.assistant.apply(r.actions); }
     let doc = d;
     if (o.studio) { const cut = await MP.productStudio.cutout(d, o.removeBg ? o.removeMode : 'auto'); const r = MP.productStudio.resolve({ preset: o.preset }); doc = MP.productStudio.build(cut, { ...r, bg: o.bgc, shadow: o.shadow, shadowOpacity: 35 }, d.name); MP.addDoc(doc); }
     else if (o.removeBg) { const cut = await MP.productStudio.cutout(d, o.removeMode === 'ai' ? 'ai' : 'local'); d.history.record('Supprimer l\'arrière-plan', null); const l = d.addLayer('Détouré'); l.canvas = cut; for (const x of d.layers) if (x !== l) x.visible = false; MP.afterEdit(); }

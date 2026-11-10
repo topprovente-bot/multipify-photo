@@ -101,7 +101,7 @@ T3({
   move(p) { if (this.eng) { this.eng.to(p); MP.render(); } },
   up() {
     if (!this.eng) return; const d = MP.doc, m = MP.sel.blurred(this.eng.clipped(), 2); this.eng = null; MP.live = null;
-    if (this.opts.ai && MP.prefs.aiKey) { const saved = d.selection; d.selection = m; MP.ai.generativeFill('').then(() => { if (saved && !d.selection) { d.selection = saved; MP.sel.updatePath(d); } MP.render(); }); return; }
+    if (this.opts.ai && MP.ai.enabled()) { const saved = d.selection; d.selection = m; MP.ai.generativeFill('').then(() => { if (saved && !d.selection) { d.selection = saved; MP.sel.updatePath(d); } MP.render(); }); return; }
     MP.busy('Suppression…', () => { d.history.record('Suppression', [d.layer.id]); MP.rasterize(d.layer); MP.healRegion(d.layer.canvas, m, Math.round(this.opts.size * 1.5) + 8); MP.afterEdit(); });
   },
   cancel() { this.eng = null; MP.live = null; },
@@ -243,7 +243,7 @@ T3({
     const r = { x: Math.max(0, Math.round(Math.min(this.a.x, this.b.x))), y: Math.max(0, Math.round(Math.min(this.a.y, this.b.y))) };
     r.w = Math.min(d.width, Math.round(Math.max(this.a.x, this.b.x))) - r.x; r.h = Math.min(d.height, Math.round(Math.max(this.a.y, this.b.y))) - r.y;
     if (r.w < 6 || r.h < 6) { MP.renderView(); return; }
-    if (this.opts.ai && MP.prefs.aiKey) { MP.ai.objectInRect(r, this.mode); return; }
+    if (this.opts.ai && MP.ai.enabled()) { MP.ai.objectInRect(r, this.mode); return; }
     MP.busy('Détection de l\'objet…', () => {
       const src = d.composite(null, { noLive: true }), data = src.getContext('2d').getImageData(r.x, r.y, r.w, r.h).data, W = r.w, H = r.h;
       // modèle de l'arrière-plan : couleurs du bord du rectangle (k-moyennes)

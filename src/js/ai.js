@@ -1,32 +1,26 @@
 'use strict';
 /* Fonctions IA : remplissage génératif, extension générative, génération d'image, détourage, sélection du sujet.
-   Utilise l'API Images d'OpenAI (clé configurée dans Édition > Préférences). */
+   Passent exclusivement par la passerelle IA du serveur Multipify (crédits IA rattachés à la licence). */
 
-MP.prefs = Object.assign({ aiKey: '', aiModel: 'gpt-image-1', aiQuality: 'medium', historyLimit: 40, rulers: true }, (() => { try { return JSON.parse(localStorage.getItem('mp.prefs') || '{}'); } catch (_) { return {}; } })());
+MP.prefs = Object.assign({ aiModel: 'gpt-image-1', aiQuality: 'medium', historyLimit: 40, rulers: true }, (() => { try { return JSON.parse(localStorage.getItem('mp.prefs') || '{}'); } catch (_) { return {}; } })());
+delete MP.prefs.aiKey; delete MP.prefs.aiMode;
 MP.savePrefs = () => { try { localStorage.setItem('mp.prefs', JSON.stringify(MP.prefs)); } catch (_) { /* stockage indisponible */ } };
+MP.savePrefs(); // efface une ancienne clé OpenAI enregistrée
 
 const b64ToBytes = (b64) => { const s = atob(b64), a = new Uint8Array(s.length); for (let i = 0; i < s.length; i++) a[i] = s.charCodeAt(i); return a; };
 const canvasPng = (c) => new Promise((r) => c.toBlob(async (b) => r(new Uint8Array(await b.arrayBuffer())), 'image/png'));
 
 MP.ai = {
+  /** IA disponible : licence active et connectée (défini par licence.js) */
+  enabled() { return false; },
   ready() {
-    if (MP.prefs.aiKey) return true;
-    MP.toast('Ajoutez votre clé API dans Édition > Préférences > IA', 4000);
-    MP.ui.dialogs.prefs('ai'); return false;
+    MP.toast('Les fonctions IA nécessitent une licence active (crédits IA rattachés à votre clé)', 5000); return false;
   },
   size(w, h) { const r = w / h; return r > 1.25 ? [1536, 1024] : r < 0.8 ? [1024, 1536] : [1024, 1024]; },
   async request(endpoint, { json, form }) {
-    const req = { url: 'https://api.openai.com/v1/images/' + endpoint, key: MP.prefs.aiKey, json, form };
-    let res;
-    if (MP.native.aiRequest) res = await MP.native.aiRequest(req);
-    else {
-      const headers = { Authorization: 'Bearer ' + req.key }; let body;
-      if (form) { body = new FormData(); for (const [k, v] of Object.entries(form)) { if (v && v.data) body.append(k, new Blob([v.data], { type: v.type }), v.filename); else body.append(k, String(v)); } }
-      else { headers['Content-Type'] = 'application/json'; body = JSON.stringify(json); }
-      const r = await fetch(req.url, { method: 'POST', headers, body }); res = { ok: r.ok, status: r.status, text: await r.text() };
-    }
+    void endpoint; void json; void form; const res = { ok: false, status: 503, text: '' }; // remplacé par la passerelle Multipify (licence.js)
     let j = null; try { j = JSON.parse(res.text); } catch (_) { /* réponse non JSON */ }
-    if (!res.ok) { const msg = j && j.error ? j.error.message : `erreur ${res.status}`; throw new Error(res.status === 401 ? 'clé API invalide' : msg); }
+    if (!res.ok) { const msg = j && j.error ? j.error.message : `erreur ${res.status}`; throw new Error(res.status === 503 ? 'service IA indisponible' : msg); }
     const b64 = j && j.data && j.data[0] && j.data[0].b64_json;
     if (!b64) throw new Error('réponse inattendue du service IA');
     MP.ai._lastAll = j.data.length > 1 ? await Promise.all(j.data.filter((x) => x.b64_json).map((x) => MP.io.loadImage(b64ToBytes(x.b64_json), 'ia.png'))) : null;

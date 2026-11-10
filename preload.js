@@ -25,7 +25,6 @@ contextBridge.exposeInMainWorld('native', {
   readClipboardImage: () => ipcRenderer.invoke('clipboard-read-image'),
   writeClipboardImage: (data) => ipcRenderer.invoke('clipboard-write-image', data),
   pathForFile: (f) => { try { return webUtils.getPathForFile(f); } catch (_) { return null; } },
-  aiRequest: (req) => ipcRenderer.invoke('ai-request', req),
   licenseMachine: () => ipcRenderer.invoke('license-machine'),
   licenseLoad: () => ipcRenderer.invoke('license-load'),
   licenseSave: (d) => ipcRenderer.invoke('license-save', d),

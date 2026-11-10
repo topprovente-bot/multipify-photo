@@ -337,7 +337,7 @@ UI.ctxbar = {
 UI.buildHome = () => {
   const w = $('#welcome');
   w.innerHTML = `<div class="home"><aside class="home-nav"><div class="logo big">M</div><button class="btn primary" id="h-new">Nouveau fichier</button><button class="btn" id="h-open">Ouvrir…</button><button class="btn" id="h-clip">Depuis le presse-papiers</button><button class="btn" id="h-gen">✨ Générer une image</button><div class="muted" style="margin-top:auto">Ctrl+F : rechercher une commande</div></aside>
-  <main class="home-main"><h1>Bienvenue dans Multipify <b>Photo</b></h1><p class="muted">Retouchez, composez, créez — ou partez d'un modèle prêt à l'emploi.</p>
+  <main class="home-main"><h1>Bienvenue dans Multipify <b class="mp-brand">Photo</b></h1><p class="muted">Retouchez, composez, créez — ou partez d'un modèle prêt à l'emploi.</p>
   <h3>Démarrage rapide</h3><div class="h-grid" id="h-presets"></div><h3>Modèles</h3><div class="h-grid" id="h-templates"></div><div id="h-rec"></div>
   <p class="muted">Astuce : glissez-déposez vos images ici pour les ouvrir.</p></main></div>`;
   $('#h-new').onclick = () => UI.dialogs.newDoc(); $('#h-open').onclick = () => MP.io.open(); $('#h-clip').onclick = () => MP.cmd.newFromClipboard(); $('#h-gen').onclick = () => UI.dialogs.genImage();
