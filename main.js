@@ -145,6 +145,20 @@ ipcMain.handle('license-load', () => {
 ipcMain.handle('license-save', (_e, data) => {
   try { const txt = JSON.stringify(data || {}); const { safeStorage } = require('electron'); fs.mkdirSync(path.dirname(licFile()), { recursive: true }); fs.writeFileSync(licFile(), safeStorage && safeStorage.isEncryptionAvailable() ? safeStorage.encryptString(txt) : Buffer.from(txt)); return true; } catch (_) { return false; }
 });
+/* Réponse image du serveur : accepte les formats courants (b64, b64_json, data[0], data URL, url…)
+   et la ramène toujours à { b64 } ; une image donnée par URL est téléchargée ici. */
+function findImage(j) {
+  const c = [j.b64, j.b64_json, j.image, j.result, j.output, j.data && j.data[0] && (j.data[0].b64_json || j.data[0].b64 || j.data[0].url),
+    Array.isArray(j.images) && j.images[0] && (j.images[0].b64_json || j.images[0].b64 || j.images[0].url || j.images[0]), j.url, j.imageUrl, j.image_url];
+  for (const v of c) if (typeof v === 'string' && v.length > 20) return v;
+  if (j.data && typeof j.data === 'object' && !Array.isArray(j.data)) return findImage(j.data);
+  return null;
+}
+async function normalizeImage(j, signal) {
+  const v = findImage(j); if (!v) return;
+  if (/^https?:\/\//i.test(v)) { try { const r = await fetch(v, { signal }); if (r.ok) j.b64 = Buffer.from(await r.arrayBuffer()).toString('base64'); } catch (_) { /* laissé au renderer */ } return; }
+  j.b64 = v.replace(/^data:image\/[a-z+.-]+;base64,/i, '').replace(/\s+/g, '');
+}
 ipcMain.handle('photo-api', async (_e, req) => {
   const p = String(req && req.path || ''); if (!/^\/api\/photo\/[a-z0-9/_-]+(\?[\w=&%.-]*)?$/i.test(p)) return { status: 400, json: { error: 'chemin refusé' } };
   const m = machineInfo(), headers = { 'Content-Type': 'application/json', 'X-Photo-Machine': m.id, 'User-Agent': 'MultipifyPhoto/' + m.version };
@@ -152,7 +166,9 @@ ipcMain.handle('photo-api', async (_e, req) => {
   const ac = new AbortController(), to = setTimeout(() => ac.abort(), Number(req.timeout) || 240000);
   try {
     const r = await fetch(MP_SERVER + p, { method: req.method === 'GET' ? 'GET' : 'POST', headers, body: req.method === 'GET' ? undefined : JSON.stringify({ ...(req.body || {}), machineId: m.id }), signal: ac.signal });
-    const t = await r.text(); let j = null; try { j = JSON.parse(t); } catch (_) { j = { error: t.slice(0, 200) }; } return { status: r.status, json: j };
+    const t = await r.text(); let j = null; try { j = JSON.parse(t); } catch (_) { j = { error: t.slice(0, 200) }; }
+    if (r.ok && j && p.startsWith('/api/photo/ai/image')) await normalizeImage(j, ac.signal);
+    return { status: r.status, json: j };
   } catch (e) { return { status: 0, json: { error: 'Connexion au serveur Multipify impossible : vérifiez votre accès Internet.', offline: true } }; }
   finally { clearTimeout(to); }
 });

@@ -155,7 +155,9 @@
   AI.request = async (endpoint, { json, form }) => {
     const body = endpoint === 'edits' ? { op: 'edit', prompt: form.prompt, size: form.size, quality: form.quality, background: form.background, image: toB64(form.image.data), mask: form.mask ? toB64(form.mask.data) : null } : { op: 'generate', prompt: json.prompt, size: json.size, quality: json.quality, background: json.background };
     const r = await L.api('/api/photo/ai/image', body, 'POST', 300000); if (r.status !== 200) fail(r); after(r.json);
-    const s = atob(r.json.b64), a = new Uint8Array(s.length); for (let i = 0; i < s.length; i++) a[i] = s.charCodeAt(i); return MP.io.loadImage(a, 'ia.png');
+    const j = r.json || {}, pick = (o) => { if (!o || typeof o !== 'object') return null; for (const v of [o.b64, o.b64_json, o.image, o.result, o.output, o.data && o.data[0] && (o.data[0].b64_json || o.data[0].b64), Array.isArray(o.images) && o.images[0] && (o.images[0].b64_json || o.images[0].b64 || o.images[0])]) if (typeof v === 'string' && v.length > 20 && !/^https?:/i.test(v)) return v; return o.data && !Array.isArray(o.data) ? pick(o.data) : null; };
+    const raw = pick(j); if (!raw) throw new Error(T('le serveur n\'a pas renvoyé d\'image') + ' (' + (Object.keys(j).join(', ') || T('réponse vide')) + ')');
+    const s = atob(raw.replace(/^data:image\/[a-z+.-]+;base64,/i, '').replace(/\s+/g, '')), a = new Uint8Array(s.length); for (let i = 0; i < s.length; i++) a[i] = s.charCodeAt(i); return MP.io.loadImage(a, 'ia.png');
   };
   if (chat0) AI.chat = async (o) => {
     const r = await L.api('/api/photo/ai/chat', { system: o.system, user: o.user, image: o.image ? shot(o.image) : null, history: o.history || [], json: o.json !== false, maxTokens: o.maxTokens }, 'POST', 150000); if (r.status !== 200) fail(r); after(r.json);
